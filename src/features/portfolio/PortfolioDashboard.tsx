@@ -30,6 +30,7 @@ import {
   type RebalanceResult,
 } from '@/domain/portfolio'
 import { PurchaseEditor, type PortfolioEditorRow } from './PurchaseEditor'
+import { ProposalNotice } from './ProposalNotice'
 import {
   clearPortfolioStorage,
   loadPortfolioStorage,
@@ -536,6 +537,7 @@ export function PortfolioDashboard({
         </header>
 
         <main className="mx-auto max-w-[1440px] px-5 pb-8 pt-8 sm:px-8 lg:px-10 lg:pt-10">
+          <ProposalNotice visible={proposal.status === 'success'} />
           {storageState.status === 'error' && (
             <p
               role="status"
