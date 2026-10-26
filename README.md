@@ -25,6 +25,12 @@ La aplicación comienza con datos de ejemplo. El precio actual determina el valo
 
 La cantidad total y el costo promedio se calculan a partir de las compras. Las posiciones guardadas con la versión anterior conservan su cantidad y aparecen con costo pendiente hasta que completes el precio pagado.
 
+## Revisar tus posiciones
+
+La tabla permite ordenar las acciones por el valor de la posición, de mayor a menor o de menor a mayor. Si hay más de diez acciones, muestra diez por página. El valor total del portafolio siempre incluye todas las posiciones.
+
+La ganancia o pérdida estimada compara el valor actual con el costo de las compras registradas. Es un resultado no realizado, antes de comisiones e impuestos. Si falta el costo de alguna compra, aparece como pendiente. Una acción sin posición no tiene un resultado de venta.
+
 ## Elegir el tema
 
 Usa el control de tema del encabezado para cambiar entre claro y oscuro. La elección se conserva en el navegador. Si no has elegido uno, se usa la preferencia del sistema.
@@ -58,6 +64,10 @@ npm run build
 El comando selecciona las pruebas del dominio, del almacenamiento y del adaptador de cotizaciones. Las pruebas del proveedor simulan respuestas HTTP y no necesitan acceso a Yahoo Finance.
 
 Para revisar el build localmente, ejecuta `npm run build` y después `npm start`. Vite muestra la dirección de la vista previa compilada.
+
+## Calidad del código
+
+`npm run lint` ejecuta Oxlint y `npm run doctor:react` analiza el código React. Ambas herramientas están instaladas con versiones fijas. Consulta [los comandos y su alcance](docs/tooling.md).
 
 ## Decisiones y uso de IA
 

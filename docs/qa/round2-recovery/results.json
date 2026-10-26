@@ -1,0 +1,113 @@
+{
+  "target": {
+    "checkout": "/Users/tombollini/.t3/projects/fintual-task",
+    "branch": "main",
+    "commit": "c1b5c0afebe7fef76535656099f7e0259c8c51c9",
+    "url": "http://localhost:3000"
+  },
+  "artifacts": {
+    "owner": "/Users/tombollini/.t3/worktrees/fintual-task/feat-portfolio-ux-quality/docs/qa/round2-recovery",
+    "codeChanged": false
+  },
+  "method": {
+    "browser": "Chrome 156.0.8078.47 headless",
+    "runner": "Playwright",
+    "contexts": "Aislados para cada escenario de almacenamiento",
+    "navigation": "networkidle",
+    "storageFailures": "Storage.prototype getItem, setItem y removeItem bloqueados desde addInitScript; JSON inválido sembrado antes de cargar la app.",
+    "rootSupplement": "Root verificó el cálculo con POST demorado 1200 ms y doble clic real page.mouse.dblclick(delay: 40), el reintento con un fetch real después de quitar la ruta de fallo, y el siguiente Tab después de quitar una compra. No se usaron dobles clics sintéticos disparados desde JavaScript para reportar duplicados."
+  },
+  "cases": [
+    {
+      "id": "delayed-post-double-click",
+      "status": "PASS",
+      "expected": "Un doble clic real durante un POST demorado produce una sola solicitud. Editar y actualizar precios permanecen deshabilitados mientras se calcula.",
+      "actual": "El POST se demoró 1200 ms. El doble clic real produjo una solicitud. Editar y actualizar precios estuvieron deshabilitados durante la espera.",
+      "method": "Verificación complementaria de root con page.mouse.dblclick(delay: 40).",
+      "evidence": ["01-delayed-post-pending.png"]
+    },
+    {
+      "id": "storage-getitem-blocked",
+      "status": "PASS",
+      "expected": "La app sigue visible y explica que no pudo recuperar los datos.",
+      "actual": "Se mostró: No se pudo recuperar el portafolio. Se muestra el ejemplo sin reemplazar la copia guardada.",
+      "method": "Storage.prototype.getItem lanzó SecurityError desde addInitScript.",
+      "evidence": ["02-storage-getitem-blocked.png"]
+    },
+    {
+      "id": "storage-setitem-blocked",
+      "status": "PASS",
+      "expected": "La app sigue operativa e informa que los cambios no pudieron guardarse.",
+      "actual": "Al guardar, se mostró: No se pudieron guardar los cambios. Podrían perderse al recargar.",
+      "method": "Storage.prototype.setItem lanzó SecurityError desde addInitScript; se abrió y guardó el editor.",
+      "evidence": ["03-storage-setitem-blocked.png"]
+    },
+    {
+      "id": "storage-removeitem-blocked",
+      "status": "PASS",
+      "expected": "La app informa que no pudo borrar la copia y que esta podría volver al recargar.",
+      "actual": "Se mostró: Se muestra el ejemplo, pero no se pudo borrar el portafolio guardado y podría volver al recargar.",
+      "method": "Storage.prototype.removeItem lanzó SecurityError desde addInitScript; se ejecutó la acción Restablecer portafolio.",
+      "evidence": ["04-storage-removeitem-blocked.png"]
+    },
+    {
+      "id": "corrupt-storage-not-overwritten",
+      "status": "PASS",
+      "expected": "Se informa que no se pudieron recuperar los datos y el JSON corrupto queda intacto.",
+      "actual": "La app mostró el aviso de recuperación. El valor balance.portfolio.v1 siguió siendo {json-corrupto después de cargar.",
+      "method": "El valor corrupto se escribió con el método nativo antes de cargar la app; se leyó después con el método nativo guardado.",
+      "evidence": ["05-storage-corrupt-json.png"]
+    },
+    {
+      "id": "purchase-add-focus-scroll",
+      "status": "PASS",
+      "expected": "La compra nueva queda en la zona visible y el foco permanece dentro del editor.",
+      "actual": "Las compras pasaron de 2 a 3. El foco quedó en Agregar compra dentro del editor, y el campo nuevo quedó visible.",
+      "method": "Se agregó una compra en la primera acción del editor.",
+      "evidence": ["06-purchase-added-focus-scroll.png"]
+    },
+    {
+      "id": "purchase-remove-keyboard-continuity",
+      "status": "PASS",
+      "expected": "Al quitar una compra, la navegación por teclado conserva continuidad en el editor.",
+      "actual": "Después de quitar una compra, el foco inmediato quedó en BODY. La siguiente pulsación Tab enfocó Agregar compra de AAPL.",
+      "method": "Root verificó la pulsación Tab real después de quitar la compra.",
+      "evidence": ["07-purchase-removed-focus-scroll.png"]
+    },
+    {
+      "id": "retry-price-refresh-after-network-error",
+      "status": "PASS",
+      "expected": "Tras el error de red, el control permite reintentar y una respuesta recuperada muestra los metadatos de cotización.",
+      "actual": "La primera solicitud abortada mostró Failed to fetch. Tras quitar la ruta de fallo, un solo reintento real obtuvo cotizaciones de Yahoo y mostró sus metadatos.",
+      "method": "Root quitó la ruta de fallo y ejecutó un fetch real una vez, sin repetirlo en un bucle.",
+      "evidence": ["04-network-error-desktop.png", "08-refresh-network-error.png"]
+    },
+    {
+      "id": "prior-network-error-message",
+      "status": "KNOWN_P3",
+      "expected": "El error de red debe comunicarse en español con una indicación clara para reintentar.",
+      "actual": "El aviso rojo mostró el texto técnico Failed to fetch.",
+      "newFinding": false,
+      "evidence": ["04-network-error-desktop.png"]
+    }
+  ],
+  "previouslyPassedNotRepeated": [
+    "Persistencia al recargar",
+    "Tema oscuro",
+    "Valores negativos",
+    "Cotizaciones parciales de Yahoo",
+    "Flujo de teclado previo",
+    "Viewports de 320 y 390 px",
+    "Guardar o cancelar después del error de red"
+  ],
+  "knownIssuesNotRepeated": [
+    "Más de 20 cotizaciones",
+    "Resultado de rebalanceo fuera del viewport"
+  ],
+  "summary": {
+    "pass": 8,
+    "newIssues": 0,
+    "gaps": 0,
+    "knownFindings": 1
+  }
+}
