@@ -45,7 +45,7 @@ export function PurchaseEditor({
   }
 
   return (
-    <section className="rounded-xl border border-border p-4">
+    <section className="border-b border-border py-4 last:border-b-0">
       <div className="grid grid-cols-1 items-end gap-3 sm:grid-cols-2 xl:grid-cols-[1fr_1.5fr_1fr_1fr_auto]">
         <label className="block text-[11px] font-medium text-muted-foreground">
           Ticker
@@ -120,7 +120,7 @@ export function PurchaseEditor({
             {row.lots.map((lot, lotIndex) => (
               <div
                 key={lot.id}
-                className="grid grid-cols-1 items-end gap-3 rounded-lg bg-muted/60 p-3 sm:grid-cols-[1fr_1fr_auto]"
+                className="grid grid-cols-1 items-end gap-3 border-b border-border py-3 last:border-b-0 sm:grid-cols-[1fr_1fr_auto]"
               >
                 <label className="block text-[11px] font-medium text-muted-foreground">
                   Cantidad de compra
@@ -130,7 +130,7 @@ export function PurchaseEditor({
                     min="0"
                     step="any"
                     aria-label={`Cantidad de la compra ${lotIndex + 1} de ${row.symbol || `la acción ${index + 1}`}`}
-                    className="mt-1.5 bg-card"
+                    className="mt-1.5"
                     value={lot.quantity}
                     onChange={(event) => updateLot(lot.id, 'quantity', event.target.value)}
                   />
@@ -142,7 +142,7 @@ export function PurchaseEditor({
                     min="0.01"
                     step="any"
                     aria-label={`Precio pagado de la compra ${lotIndex + 1} de ${row.symbol || `la acción ${index + 1}`}`}
-                    className="mt-1.5 bg-card"
+                    className="mt-1.5"
                     value={lot.purchasePrice}
                     placeholder="Costo pendiente"
                     onChange={(event) => updateLot(lot.id, 'purchasePrice', event.target.value)}

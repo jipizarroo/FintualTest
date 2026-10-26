@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  calculateUnrealizedReturn,
   calculateRebalance,
   Portfolio,
   summarizeLots,
@@ -61,6 +62,53 @@ describe('summarizeLots', () => {
     },
   ])('rejects $name', ({ lots }) => {
     expect(() => summarizeLots(lots)).toThrow()
+  })
+})
+
+describe('calculateUnrealizedReturn', () => {
+  it('calculates gain or loss from current value and total cost across purchases', () => {
+    expect(calculateUnrealizedReturn(150, [
+      { quantity: 2, purchasePrice: 100 },
+      { quantity: 1, purchasePrice: 200 },
+    ])).toEqual({
+      status: 'estimated',
+      change: 50,
+      changePercent: 12.5,
+      outcome: 'gain',
+    })
+
+    expect(calculateUnrealizedReturn(100, [
+      { quantity: 2, purchasePrice: 125 },
+    ])).toEqual({
+      status: 'estimated',
+      change: -50,
+      changePercent: -20,
+      outcome: 'loss',
+    })
+  })
+
+  it('marks a zero result as even', () => {
+    expect(calculateUnrealizedReturn(125, [
+      { quantity: 2, purchasePrice: 125 },
+    ])).toEqual({
+      status: 'estimated',
+      change: 0,
+      changePercent: 0,
+      outcome: 'even',
+    })
+  })
+
+  it('keeps the return pending when any positive purchase has no cost', () => {
+    expect(calculateUnrealizedReturn(150, [
+      { quantity: 2, purchasePrice: 100 },
+      { quantity: 1, purchasePrice: null },
+    ])).toEqual({ status: 'pending-cost' })
+  })
+
+  it('does not calculate a return for a zero-quantity position', () => {
+    expect(calculateUnrealizedReturn(150, [
+      { quantity: 0, purchasePrice: null },
+    ])).toEqual({ status: 'no-position' })
   })
 })
 

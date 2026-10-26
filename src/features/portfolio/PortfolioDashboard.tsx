@@ -12,24 +12,25 @@ import {
   LayoutDashboard,
   LoaderCircle,
   Plus,
-  RotateCcw,
   RefreshCw,
+  RotateCcw,
   SlidersHorizontal,
   Wallet,
   X,
 } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { ThemeToggle } from '@/components/theme-toggle'
 import type { MarketQuote, MarketQuotesResult } from '@/domain/market'
 import {
   summarizeLots,
   type PortfolioInput,
-  type PurchaseLot,
   type RebalanceResult,
 } from '@/domain/portfolio'
 import { PurchaseEditor, type PortfolioEditorRow } from './PurchaseEditor'
+import { PortfolioTable } from './PortfolioTable'
+import type { PortfolioTableRow } from './portfolio-table-model'
 import {
   clearPortfolioStorage,
   loadPortfolioStorage,
@@ -40,17 +41,6 @@ type PortfolioDashboardProps = {
   initialInput: PortfolioInput
   onRebalance: (input: PortfolioInput) => Promise<RebalanceResult>
   onRefreshPrices: (symbols: string[]) => Promise<MarketQuotesResult>
-}
-
-type PortfolioRow = {
-  id: string
-  symbol: string
-  name: string
-  quantity: number
-  currentPrice: number
-  targetPercent: number
-  averagePurchasePrice: number | null
-  lots: PurchaseLot[]
 }
 
 type ProposalState =
@@ -92,7 +82,7 @@ const allocationColors = [
   '#38bdf8',
 ]
 
-function rowsFromInput(input: PortfolioInput): PortfolioRow[] {
+function rowsFromInput(input: PortfolioInput): PortfolioTableRow[] {
   const symbols = new Set([
     ...input.positions.map((position) => position.symbol),
     ...input.allocations.map((allocation) => allocation.symbol),
@@ -128,16 +118,6 @@ function emptyEditorRow(): PortfolioEditorRow {
     targetPercent: '0',
     lots: [],
   }
-}
-
-function quoteTime(value: string): string {
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return value
-  const formatted = new Intl.DateTimeFormat('es-CL', {
-    dateStyle: 'medium',
-    timeStyle: 'short',
-  }).format(date)
-  return `${formatted} (hora local)`
 }
 
 export function PortfolioDashboard({
@@ -476,8 +456,8 @@ export function PortfolioDashboard({
           <LayoutDashboard className="size-[18px]" /> Mi portafolio
           <ChevronRight className="ml-auto size-4" />
         </a>
-        <div className="mt-auto rounded-2xl border border-blue-100 bg-gradient-to-br from-blue-50 to-white p-4 dark:border-blue-900 dark:from-blue-950/40 dark:to-slate-900">
-          <span className="mb-3 grid size-8 place-items-center rounded-lg bg-card text-blue-600 shadow-sm dark:text-blue-300">
+        <div className="mt-auto border-t border-border pt-5">
+          <span className="mb-3 grid size-8 place-items-center rounded-lg bg-muted text-blue-600 dark:text-blue-300">
             <ChartPie className="size-[18px]" />
           </span>
           <p className="text-sm font-semibold">Invierte con intención.</p>
@@ -605,7 +585,7 @@ export function PortfolioDashboard({
             </Button>
           </div>
 
-          <div className="mb-7 grid gap-4 md:grid-cols-[1.35fr_1fr_1fr]">
+          <div className="mb-7 grid items-center gap-6 md:grid-cols-[1.35fr_1fr]">
             <Card className="relative overflow-hidden border-blue-600 bg-blue-600 text-white shadow-sm shadow-blue-200/50">
               <div className="pointer-events-none absolute -right-8 -top-14 size-52 rounded-full border-[28px] border-white/[0.035]" />
               <CardContent className="relative p-6">
@@ -623,63 +603,40 @@ export function PortfolioDashboard({
                 </p>
               </CardContent>
             </Card>
-            <Card className="border-border bg-card shadow-none">
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between text-[12px] text-muted-foreground">
-                  Acciones en tu portafolio
-                  <span className="grid size-7 place-items-center rounded-lg bg-muted text-muted-foreground">
-                    <LayoutDashboard className="size-4" />
-                  </span>
-                </div>
-                <p className="mb-2 mt-2 text-[32px] font-semibold leading-none tracking-[-1px] tabular-nums">
-                  {input.positions.length.toString().padStart(2, '0')}
-                </p>
-                <p className="mt-3 text-[11px] text-muted-foreground">
-                  {positiveTargets.length} con asignación objetivo
-                </p>
-              </CardContent>
-            </Card>
-            <Card className="border-border bg-card shadow-none">
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between text-[12px] text-muted-foreground">
-                  Asignación objetivo
-                  <span className="grid size-7 place-items-center rounded-lg bg-muted text-muted-foreground">
-                    <ChartPie className="size-4" />
-                  </span>
-                </div>
-                <div className="mb-2 mt-2 flex items-end gap-2">
-                  <p className="text-[32px] font-semibold leading-none tracking-[-1px] tabular-nums">
-                    {percent.format(targetTotal)}
-                    <span className="ml-0.5 text-xl text-muted-foreground">%</span>
-                  </p>
-                  {targetComplete && (
-                    <span className="mb-0.5 flex items-center gap-1 rounded-full bg-emerald-50 dark:bg-emerald-950/40 px-2 py-1 text-[10px] font-medium text-emerald-600 dark:text-emerald-300">
-                      <Check className="size-3" /> Completa
-                    </span>
-                  )}
-                </div>
-                <p className="mt-3 text-[11px] text-muted-foreground">
-                  {targetComplete
-                    ? 'Tus objetivos suman el 100%'
-                    : 'Los objetivos deben sumar el 100%'}
-                </p>
-              </CardContent>
-            </Card>
+            <dl className="grid grid-cols-2 gap-4 sm:gap-6 md:grid-cols-1 md:gap-4">
+              <div className="border-l border-border pl-3">
+                <dt className="text-xs text-muted-foreground">Posiciones</dt>
+                <dd className="mt-1 text-2xl font-semibold tabular-nums">
+                  {input.positions.length}
+                </dd>
+                <dd className="mt-1 text-[10px] text-muted-foreground">
+                  {positiveTargets.length} con objetivo asignado
+                </dd>
+              </div>
+              <div className="border-l border-border pl-3">
+                <dt className="text-xs text-muted-foreground">Objetivo asignado</dt>
+                <dd className="mt-1 text-2xl font-semibold tabular-nums">
+                  {percent.format(targetTotal)}%
+                </dd>
+                <dd className={`mt-1 text-[10px] ${targetComplete ? 'text-emerald-700 dark:text-emerald-300' : 'text-amber-700 dark:text-amber-300'}`}>
+                  {targetComplete ? 'Completo' : 'Debe sumar 100%'}
+                </dd>
+              </div>
+            </dl>
           </div>
 
-          <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_280px]">
-            <Card
+          <section
               id="portfolio"
-              className="min-w-0 scroll-mt-6 border-border bg-card shadow-none"
+              aria-labelledby="portfolio-title"
+              className="min-w-0 scroll-mt-6 border-t border-border pt-5"
             >
-              <CardHeader className="flex-row items-center justify-between gap-3 border-b border-border pb-5">
+              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border pb-4">
                 <div>
-                  <CardTitle className="text-[16px] tracking-[-0.3px]">
+                  <h2 id="portfolio-title" className="text-[16px] font-semibold tracking-[-0.3px]">
                     Tu portafolio
-                  </CardTitle>
-                  <p className="mt-2 text-xs text-muted-foreground">
-                    El precio actual calcula la valuación. El costo promedio
-                    usa los precios pagados en cada compra.
+                  </h2>
+                  <p className="mt-1.5 text-xs text-muted-foreground">
+                    Posiciones, costos de compra y resultado estimado.
                   </p>
                 </div>
                 {!editor && (
@@ -705,15 +662,14 @@ export function PortfolioDashboard({
                     <X />
                   </Button>
                 )}
-              </CardHeader>
+              </div>
 
               {editor ? (
-                <form onSubmit={savePortfolio} className="p-5 sm:p-6">
-                  <p className="mb-5 rounded-lg bg-blue-50 dark:bg-blue-950/40 px-3 py-2.5 text-xs leading-5 text-blue-700 dark:text-blue-200">
-                    El precio actual determina la valuación y la propuesta. Agrega
-                    cada compra por separado para calcular el costo promedio.
+                <form onSubmit={savePortfolio} className="py-4">
+                  <p className="mb-4 text-xs leading-5 text-muted-foreground">
+                    El precio actual se usa para la valuación y la propuesta. El precio pagado permite calcular el resultado.
                   </p>
-                  <div className="space-y-4">
+                  <div>
                     {editor.rows.map((row, index) => (
                       <PurchaseEditor
                         key={row.id}
@@ -765,261 +721,94 @@ export function PortfolioDashboard({
                   </div>
                 </form>
               ) : rows.length === 0 ? (
-                <div className="flex flex-col items-center px-6 py-16 text-center">
-                  <span className="mb-4 grid size-14 place-items-center rounded-2xl bg-blue-50 text-blue-500 dark:bg-blue-950/40 dark:text-blue-300">
-                    <Wallet className="size-6" />
+                <div className="flex flex-col items-center py-14 text-center">
+                  <span className="mb-4 grid size-12 place-items-center rounded-xl bg-blue-50 text-blue-500 dark:bg-blue-950/40 dark:text-blue-300">
+                    <Wallet className="size-5" />
                   </span>
                   <h3 className="text-base font-semibold">
                     Tu próximo portafolio empieza aquí.
                   </h3>
                   <p className="mb-5 mt-2 max-w-xs text-sm leading-6 text-muted-foreground">
-                    Agrega tus acciones y define qué porcentaje quieres invertir
-                    en cada una.
+                    Agrega tus acciones y define qué porcentaje quieres invertir en cada una.
                   </p>
                   <Button
                     size="sm"
                     className="bg-blue-600 text-white hover:bg-blue-700"
                     disabled={!storageReady}
-                    onClick={() =>
-                      startEditing()
-                    }
+                    onClick={() => startEditing()}
                   >
                     <Plus /> Agregar mi primera acción
                   </Button>
                 </div>
               ) : (
-                <>
-                  <div className="overflow-x-auto">
-                    <table className="w-full min-w-[800px] text-left">
-                      <thead>
-                        <tr className="border-b border-border bg-muted/60 text-[10px] font-medium tracking-[0.02em] text-muted-foreground">
-                          <th scope="col" className="py-3.5 pl-6 font-medium">
-                            ACTIVO
-                          </th>
-                          <th
-                            scope="col"
-                            className="px-4 py-3.5 text-right font-medium"
-                          >
-                            CANTIDAD
-                          </th>
-                          <th
-                            scope="col"
-                            className="px-4 py-3.5 text-right font-medium"
-                          >
-                            PRECIO ACTUAL
-                          </th>
-                          <th
-                            scope="col"
-                            className="px-4 py-3.5 text-right font-medium"
-                          >
-                            COSTO PROMEDIO
-                          </th>
-                          <th
-                            scope="col"
-                            className="w-[160px] px-5 py-3.5 font-medium"
-                          >
-                            <span className="flex items-center gap-3">
-                              <span className="flex items-center gap-1.5">
-                                <span className="size-1.5 rounded-full bg-blue-500" />{' '}
-                                ACTUAL
-                              </span>
-                              <span className="flex items-center gap-1.5">
-                                <span className="size-1.5 rounded-full bg-muted-foreground/40" />{' '}
-                                OBJETIVO
-                              </span>
-                            </span>
-                          </th>
-                          <th
-                            scope="col"
-                            className="py-3.5 pl-4 pr-6 text-right font-medium"
-                          >
-                            VALOR ACTUAL
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {rows.map((row, index) => {
-                          const value =
-                            row.quantity * row.currentPrice
-                          const currentPercent =
-                            totalValue > 0 ? (value / totalValue) * 100 : 0
-                          const quoteMetadata =
-                            priceMetadata[row.symbol.toUpperCase()]
-                          return (
-                            <tr
-                              key={row.id}
-                              className="border-b border-border last:border-b-0 hover:bg-muted/50"
-                            >
-                              <td className="py-5 pl-6">
-                                <div className="flex items-center gap-3">
-                                  <span
-                                    className="grid size-10 shrink-0 place-items-center rounded-xl text-sm font-semibold"
-                                    style={{
-                                      color:
-                                        allocationColors[
-                                          index % allocationColors.length
-                                        ],
-                                      backgroundColor: `${allocationColors[index % allocationColors.length]}12`,
-                                    }}
-                                  >
-                                    {row.symbol.slice(0, 1)}
-                                  </span>
-                                  <div>
-                                    <p className="text-[13px] font-semibold">
-                                      {row.symbol}
-                                    </p>
-                                    <p
-                                      className="mt-1 max-w-36 truncate text-[11px] text-muted-foreground"
-                                      title={row.name}
-                                    >
-                                      {row.name}
-                                    </p>
-                                  </div>
-                                </div>
-                              </td>
-                              <td className="px-4 py-5 text-right text-[13px] tabular-nums">
-                                {number.format(row.quantity)}
-                              </td>
-                              <td className="whitespace-nowrap px-4 py-5 text-right text-[13px] tabular-nums text-muted-foreground">
-                                <>
-                                  {dollars.format(row.currentPrice)}
-                                  {quoteMetadata && (
-                                    <span className="mt-1 block text-[9px] text-muted-foreground">
-                                      {quoteMetadata.source} ·{' '}
-                                      {quoteTime(quoteMetadata.asOf)}
-                                    </span>
-                                  )}
-                                </>
-                              </td>
-                              <td className="whitespace-nowrap px-4 py-5 text-right text-[13px] tabular-nums text-muted-foreground">
-                                {row.quantity === 0 ? (
-                                  '—'
-                                ) : row.averagePurchasePrice === null ? (
-                                  <span title="Falta el precio pagado de una o más compras">
-                                    Pendiente
-                                  </span>
-                                ) : (
-                                  dollars.format(row.averagePurchasePrice)
-                                )}
-                              </td>
-                              <td className="px-5 py-5">
-                                <div className="flex items-center gap-2.5">
-                                  <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-blue-50 dark:bg-blue-950/40">
-                                    <div
-                                      className="h-full rounded-full bg-blue-500"
-                                      style={{
-                                        width: `${Math.min(currentPercent, 100)}%`,
-                                      }}
-                                    />
-                                  </div>
-                                  <span className="w-11 text-right text-[10px] font-medium tabular-nums text-blue-600 dark:text-blue-300">
-                                    {percent.format(currentPercent)}%
-                                  </span>
-                                </div>
-                                <div className="mt-2 flex items-center gap-2.5">
-                                  <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-muted">
-                                    <div
-                                      className="h-full rounded-full bg-muted-foreground/40"
-                                      style={{
-                                        width: `${Math.min(row.targetPercent, 100)}%`,
-                                      }}
-                                    />
-                                  </div>
-                                  <span className="w-11 text-right text-[10px] tabular-nums text-muted-foreground">
-                                    {percent.format(row.targetPercent)}%
-                                  </span>
-                                </div>
-                              </td>
-                              <td className="whitespace-nowrap py-5 pl-4 pr-6 text-right text-[13px] font-semibold tabular-nums">
-                                {dollars.format(value)}
-                              </td>
-                            </tr>
-                          )
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
-                  <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border px-6 py-4">
-                    <span className="text-[10px] text-muted-foreground">
-                      {Object.keys(priceMetadata).length === 0
-                        ? 'Precios guardados o de ejemplo · USD'
-                        : 'Las cotizaciones muestran su fuente y hora · USD'}
-                    </span>
-                    <button
-                      type="button"
-                      className="flex cursor-pointer items-center gap-1.5 text-[11px] font-medium text-blue-600 transition-colors hover:text-blue-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 dark:text-blue-300 dark:hover:text-blue-200 disabled:cursor-not-allowed disabled:opacity-50"
-                      disabled={loading || refreshingPrices || !storageReady}
-                      onClick={() => startEditing(true)}
-                    >
-                      <Plus className="size-3.5" /> Agregar acción
-                    </button>
-                  </div>
-                </>
+                <PortfolioTable
+                  rows={rows}
+                  totalValue={totalValue}
+                  priceMetadata={priceMetadata}
+                  addDisabled={loading || refreshingPrices || !storageReady}
+                  onAddStock={() => startEditing(true)}
+                />
               )}
-            </Card>
+          </section>
 
-            <Card className="border-border bg-card shadow-none">
-              <CardHeader>
-                <CardTitle className="text-[15px] tracking-[-0.2px]">
-                  Tu distribución ideal
-                </CardTitle>
+          <section
+            className="mt-8 border-t border-border pt-6"
+            aria-labelledby="distribution-title"
+          >
+            <div className="mb-5 flex items-center gap-2.5">
+              <ChartPie className="size-4 text-blue-600 dark:text-blue-300" />
+              <div>
+                <h2 id="distribution-title" className="text-[16px] font-semibold tracking-[-0.3px]">
+                  Distribución objetivo
+                </h2>
                 <p className="mt-1 text-xs text-muted-foreground">
-                  Así quieres repartir tu inversión.
+                  Porcentaje asignado a cada acción.
                 </p>
-              </CardHeader>
-              <CardContent className="pt-7">
-                <div
-                  className="relative mx-auto mb-6 grid size-40 place-items-center rounded-full"
-                  style={{ background: chartBackground }}
-                  role="img"
-                  aria-label={`Distribución objetivo. Total asignado ${percent.format(targetTotal)} por ciento.`}
-                >
-                  <div className="flex size-[120px] flex-col items-center justify-center rounded-full bg-card">
-                    <span className="text-[27px] font-semibold leading-none tracking-[-1px] tabular-nums">
-                      {percent.format(targetTotal)}
-                      <span className="text-lg text-muted-foreground">%</span>
-                    </span>
-                    <span className="mt-2 text-[10px] text-muted-foreground">
-                      asignado
-                    </span>
-                  </div>
+              </div>
+            </div>
+            <div className="grid items-center gap-6 sm:grid-cols-[160px_minmax(0,1fr)]">
+              <div
+                className="relative mx-auto grid size-40 place-items-center rounded-full"
+                style={{ background: chartBackground }}
+                role="img"
+                aria-label={`Distribución objetivo. Total asignado ${percent.format(targetTotal)} por ciento.`}
+              >
+                <div className="flex size-[120px] flex-col items-center justify-center rounded-full bg-background">
+                  <span className="text-[27px] font-semibold leading-none tracking-[-1px] tabular-nums">
+                    {percent.format(targetTotal)}
+                    <span className="text-lg text-muted-foreground">%</span>
+                  </span>
+                  <span className="mt-2 text-[10px] text-muted-foreground">asignado</span>
                 </div>
-                <div className="space-y-3.5">
-                  {positiveTargets.map((row, index) => (
-                    <div
-                      key={row.id}
-                      className="flex items-center gap-2.5 text-xs"
-                    >
-                      <span
-                        className="size-2 rounded-full"
-                        style={{
-                          backgroundColor:
-                            allocationColors[index % allocationColors.length],
-                        }}
-                      />
-                      <span className="font-medium text-muted-foreground">
-                        {row.symbol}
-                      </span>
-                      <span className="ml-auto font-medium tabular-nums text-muted-foreground">
-                        {percent.format(row.targetPercent)}%
-                      </span>
-                    </div>
-                  ))}
-                  {positiveTargets.length === 0 && (
-                    <p className="text-center text-xs leading-5 text-muted-foreground">
-                      Agrega porcentajes objetivo para ver tu distribución.
-                    </p>
-                  )}
-                </div>
-                {!targetComplete && rows.length > 0 && (
-                  <p className="mt-5 rounded-lg bg-amber-50 dark:bg-amber-950/40 px-3 py-2.5 text-[11px] leading-5 text-amber-700 dark:text-amber-200">
-                    Ajusta tus objetivos para que sumen el 100% antes de
-                    rebalancear.
-                  </p>
+              </div>
+              <ul className="divide-y divide-border border-y border-border">
+                {positiveTargets.map((row, index) => (
+                  <li key={row.id} className="flex items-center gap-2.5 py-2.5 text-xs">
+                    <span
+                      className="size-2 shrink-0 rounded-full"
+                      style={{
+                        backgroundColor: allocationColors[index % allocationColors.length],
+                      }}
+                    />
+                    <span className="font-medium">{row.symbol}</span>
+                    <span className="ml-auto tabular-nums text-muted-foreground">
+                      {percent.format(row.targetPercent)}%
+                    </span>
+                  </li>
+                ))}
+                {positiveTargets.length === 0 && (
+                  <li className="py-3 text-xs text-muted-foreground">
+                    Agrega porcentajes objetivo para ver la distribución.
+                  </li>
                 )}
-              </CardContent>
-            </Card>
-          </div>
+              </ul>
+            </div>
+            {!targetComplete && rows.length > 0 && (
+              <p className="mt-4 border-l-2 border-amber-500 pl-3 text-xs leading-5 text-amber-700 dark:text-amber-200">
+                Ajusta los objetivos para que sumen 100% antes de rebalancear.
+              </p>
+            )}
+          </section>
 
           <section
             className="mt-7"
@@ -1037,14 +826,11 @@ export function PortfolioDashboard({
               >
                 Tu próximo movimiento
               </h2>
-              <span className="ml-1 rounded-full border border-border px-2 py-0.5 text-[9px] font-medium text-muted-foreground">
-                PROPUESTA
-              </span>
             </div>
 
             {proposal.status === 'idle' && (
-              <div className="flex flex-col items-start gap-5 rounded-2xl border border-dashed border-blue-200 bg-blue-50/40 px-6 py-7 sm:flex-row sm:items-center sm:px-7 dark:border-blue-900 dark:bg-blue-950/30">
-                <span className="grid size-12 shrink-0 place-items-center rounded-2xl border border-blue-100 bg-card text-blue-500 dark:border-blue-900 dark:text-blue-300">
+              <div className="flex flex-col items-start gap-4 border-t border-dashed border-border py-5 sm:flex-row sm:items-center">
+                <span className="grid size-10 shrink-0 place-items-center text-blue-500 dark:text-blue-300">
                   <ArrowRightLeft className="size-5" />
                 </span>
                 <div className="flex-1">
@@ -1068,7 +854,7 @@ export function PortfolioDashboard({
             )}
 
             {proposal.status === 'loading' && (
-              <div className="flex items-center justify-center gap-3 rounded-2xl border border-border bg-card px-6 py-12 text-sm text-muted-foreground">
+              <div className="flex items-center justify-center gap-3 border-y border-border py-8 text-sm text-muted-foreground">
                 <LoaderCircle className="size-5 animate-spin text-blue-500 dark:text-blue-300" />{' '}
                 Calculando tu propuesta...
               </div>
@@ -1077,7 +863,7 @@ export function PortfolioDashboard({
             {proposal.status === 'error' && (
               <div
                 role="alert"
-                className="flex items-start gap-3 rounded-2xl border border-red-100 dark:border-red-900 bg-red-50 dark:bg-red-950/40 px-6 py-5"
+                className="flex items-start gap-3 border-l-2 border-red-500 py-4 pl-4"
               >
                 <CircleAlert className="mt-0.5 size-5 shrink-0 text-red-500 dark:text-red-300" />
                 <div>
@@ -1093,8 +879,8 @@ export function PortfolioDashboard({
 
             {proposal.status === 'success' &&
               proposal.result.trades.length === 0 && (
-                <div className="flex items-center gap-4 rounded-2xl border border-emerald-100 bg-emerald-50/60 px-6 py-7 dark:border-emerald-900 dark:bg-emerald-950/30">
-                  <span className="grid size-12 shrink-0 place-items-center rounded-2xl bg-card text-emerald-600 dark:text-emerald-300">
+                <div className="flex items-center gap-4 border-y border-border py-5">
+                  <span className="grid size-10 shrink-0 place-items-center text-emerald-600 dark:text-emerald-300">
                     <CheckCheck className="size-6" />
                   </span>
                   <div>
@@ -1111,8 +897,8 @@ export function PortfolioDashboard({
 
             {proposal.status === 'success' &&
               proposal.result.trades.length > 0 && (
-                <Card className="overflow-hidden border-border bg-card shadow-none">
-                  <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border px-6 py-4">
+                <div className="overflow-hidden border-y border-border">
+                  <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border py-4">
                     <p className="text-[12px] text-muted-foreground">
                       <span className="font-semibold text-foreground">
                         {proposal.result.trades.length} operaciones
@@ -1193,11 +979,11 @@ export function PortfolioDashboard({
                       </tbody>
                     </table>
                   </div>
-                  <p className="border-t border-border px-6 py-3.5 text-[10px] leading-5 text-muted-foreground">
+                  <p className="border-t border-border py-3.5 text-[10px] leading-5 text-muted-foreground">
                     La propuesta usa acciones fraccionadas y los precios
                     ingresados. No incluye comisiones ni impuestos.
                   </p>
-                </Card>
+                </div>
               )}
           </section>
 

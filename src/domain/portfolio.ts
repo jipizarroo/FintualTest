@@ -60,6 +60,53 @@ export function summarizeLots(
   return { quantity, averagePurchasePrice }
 }
 
+export type UnrealizedReturn =
+  | { status: 'no-position' }
+  | { status: 'pending-cost' }
+  | {
+      status: 'estimated'
+      change: number
+      changePercent: number
+      outcome: 'gain' | 'loss' | 'even'
+    }
+
+export function calculateUnrealizedReturn(
+  currentPrice: number,
+  lots: readonly Readonly<PurchaseLot>[],
+): UnrealizedReturn {
+  const summary = summarizeLots(lots)
+  if (summary.quantity === 0) return { status: 'no-position' }
+
+  if (!Number.isFinite(currentPrice) || currentPrice <= 0) {
+    throw new Error('El precio actual debe ser finito y mayor que cero.')
+  }
+
+  let totalCost = 0
+  for (const lot of lots) {
+    if (lot.quantity === 0) continue
+    if (lot.purchasePrice === null) return { status: 'pending-cost' }
+    totalCost += lot.quantity * lot.purchasePrice
+  }
+
+  const marketValue = summary.quantity * currentPrice
+  const change = marketValue - totalCost
+  const changePercent = (change / totalCost) * 100
+  if (
+    !Number.isFinite(marketValue) ||
+    !Number.isFinite(change) ||
+    !Number.isFinite(changePercent)
+  ) {
+    throw new Error('El resultado estimado excede los límites numéricos permitidos.')
+  }
+
+  return {
+    status: 'estimated',
+    change,
+    changePercent,
+    outcome: change > 0 ? 'gain' : change < 0 ? 'loss' : 'even',
+  }
+}
+
 export interface AllocationInput {
   symbol: string
   targetPercent: number

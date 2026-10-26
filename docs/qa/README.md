@@ -5,3 +5,9 @@ Los informes de `desktop/` y `mobile/` corresponden al commit `c1b5c0afebe7fef76
 Las mejoras de interfaz y herramientas se desarrollan en `feat/portfolio-ux-quality` y se verifican por separado en `http://localhost:3001`. Las capturas de estos informes muestran la base, antes de esas mejoras.
 
 Cada defecto publicado en GitHub incluye pasos de reproducción y un enlace a su evidencia. Un cambio de diseño solicitado, como reducir las tarjetas o agregar paginación, no se clasifica como defecto de la versión anterior.
+
+## Resultados
+
+- Escritorio: [informe](desktop/qa-report.md), sin defectos reproducibles en el recorrido del agente.
+- Móvil: [informe](mobile/informe.md), propuesta de rebalanceo fuera de la vista sin confirmación visible. Registrado en [issue #2](https://github.com/jipizarroo/FintualTest/issues/2).
+- Casos de borde adicionales: [informe](edge-cases/qa-report.md), actualización de precios rechazada para una cartera de 23 acciones. Registrado en [issue #1](https://github.com/jipizarroo/FintualTest/issues/1).

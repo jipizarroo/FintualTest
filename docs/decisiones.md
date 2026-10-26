@@ -113,3 +113,21 @@ La consulta de mercado devuelve éxitos y errores por símbolo. Los éxitos reem
 La hora de la cotización pertenece al proveedor. La hora de la consulta no la reemplaza. La aplicación guarda los precios actualizados, pero no conserva los metadatos de la consulta entre recargas. Después de recargar, identifica los valores como precios guardados hasta una nueva consulta.
 
 Las consultas están aisladas en el adaptador de servidor. [mercado.md](mercado.md) explica la fuente, la disponibilidad y los límites de uso del proveedor.
+
+## Lectura de posiciones y resultado estimado
+
+El valor total es la única tarjeta de resumen. La tabla, la distribución objetivo y la propuesta se presentan como secciones para reducir contenedores repetidos.
+
+El orden se aplica a todas las filas antes de dividirlas en páginas de diez. El criterio es el valor de la posición, cantidad por precio actual. La página visible no modifica las posiciones, los objetivos ni el total usado para rebalancear.
+
+Se comparó una tabla con estado local frente a TanStack Table. Para un criterio de orden y páginas de tamaño fijo, el estado local evita una dependencia y la configuración de columnas. El cálculo financiero permanece en el dominio y la presentación de la tabla se separa del formulario.
+
+La ganancia o pérdida no realizada usa el costo de todas las compras con cantidad positiva. Una compra sin costo conocido mantiene el resultado pendiente. No se usa el precio actual como sustituto del costo histórico.
+
+```text
+costoTotal = suma de cantidad × precioPagado
+resultado = valorActual − costoTotal
+resultadoPorcentual = resultado / costoTotal × 100
+```
+
+El cálculo supone vender toda la posición al precio actual registrado. No incluye comisiones, impuestos ni diferencias entre el precio mostrado y un precio de ejecución. Las acciones objetivo sin posición no muestran rentabilidad.
