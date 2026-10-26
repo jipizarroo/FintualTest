@@ -12,3 +12,6 @@ Cada defecto publicado en GitHub incluye pasos de reproducción y un enlace a su
 - Móvil: [informe](mobile/informe.md), propuesta de rebalanceo fuera de la vista sin confirmación visible. Registrado en [issue #2](https://github.com/jipizarroo/FintualTest/issues/2).
 - Casos de borde adicionales: [informe](edge-cases/qa-report.md), actualización de precios rechazada para una cartera de 23 acciones. Registrado en [issue #1](https://github.com/jipizarroo/FintualTest/issues/1).
 - Segunda ronda, recuperación: mensaje técnico de error de red sin explicación en español. Registrado en [issue #5](https://github.com/jipizarroo/FintualTest/issues/5).
+- Segunda ronda, validación: el editor bloquea precios positivos menores a USD 0,01 que el almacenamiento acepta. Registrado en [issue #6](https://github.com/jipizarroo/FintualTest/issues/6).
+
+La segunda ronda quedó completa. El [informe de validación](round2-validation/report.md) registra diez casos aprobados y el defecto #6. El [informe de recuperación](round2-recovery/report.md) registra ocho casos aprobados y conserva la evidencia del defecto #5.
