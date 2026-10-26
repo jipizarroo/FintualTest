@@ -1,6 +1,6 @@
 # Balance
 
-Simulador de rebalanceo de portafolios para la postulación a Fintual. Permite editar posiciones y precios, definir la distribución objetivo y obtener una propuesta de compra y venta.
+Simulador de rebalanceo de portafolios para la postulación a Fintual. Permite registrar compras a distintos precios, consultar cotizaciones, definir la distribución objetivo y obtener una propuesta de compra y venta.
 
 ## Ejecutar la aplicación
 
@@ -16,11 +16,18 @@ Abre la URL que muestra Vite en la terminal.
 ## Probar el rebalanceo
 
 1. Carga el ejemplo de la pantalla.
-2. Cambia cantidades, precios o porcentajes objetivo.
-3. Mantén la suma de los objetivos en 100 %.
-4. Calcula la propuesta y revisa las compras y ventas.
+2. Edita una acción y agrega sus compras con cantidad y precio pagado.
+3. Ajusta el precio actual o usa **Actualizar precios** para consultar Yahoo Finance.
+4. Mantén la suma de los objetivos en 100 %.
+5. Calcula la propuesta y revisa las compras y ventas.
 
-Los precios son simulados y editables. Las operaciones son propuestas, sin conexión a un intermediario ni envío de órdenes.
+La aplicación comienza con datos de ejemplo. El precio actual determina el valor de la posición. El precio pagado determina el costo de compra. Las operaciones son propuestas, sin conexión a un intermediario ni envío de órdenes.
+
+La cantidad total y el costo promedio se calculan a partir de las compras. Las posiciones guardadas con la versión anterior conservan su cantidad y aparecen con costo pendiente hasta que completes el precio pagado.
+
+## Elegir el tema
+
+Usa el control de tema del encabezado para cambiar entre claro y oscuro. La elección se conserva en el navegador. Si no has elegido uno, se usa la preferencia del sistema.
 
 ## Conservar tu portafolio
 
@@ -43,15 +50,15 @@ El dominio no importa React ni TanStack. La interfaz envía datos al servidor y 
 ## Verificación
 
 ```sh
-npm run test -- src/domain/portfolio.test.ts src/features/portfolio/storage.test.ts
+npm run test -- src/domain/portfolio.test.ts src/features/portfolio/storage.test.ts src/server/market.test.ts
 npm run typecheck
 npm run build
 ```
 
-El comando de pruebas selecciona únicamente los archivos del dominio y del almacenamiento del portafolio.
+El comando selecciona las pruebas del dominio, del almacenamiento y del adaptador de cotizaciones. Las pruebas del proveedor simulan respuestas HTTP y no necesitan acceso a Yahoo Finance.
 
 Para revisar el build localmente, ejecuta `npm run build` y después `npm start`. Vite muestra la dirección de la vista previa compilada.
 
 ## Decisiones y uso de IA
 
-Lee [las decisiones y los supuestos del cálculo](docs/decisiones.md), [los resultados de verificación](docs/verificacion.md) y [el registro de uso de IA](docs/uso-de-ia.md). La consigna solicita compartir las conversaciones utilizadas durante el desarrollo.
+Lee [las decisiones y los supuestos del cálculo](docs/decisiones.md), [el proveedor de cotizaciones y sus límites](docs/mercado.md), [los resultados de verificación](docs/verificacion.md) y [el registro de uso de IA](docs/uso-de-ia.md). La consigna solicita compartir las conversaciones utilizadas durante el desarrollo.

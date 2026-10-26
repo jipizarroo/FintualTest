@@ -1,8 +1,63 @@
+export interface PurchaseLot {
+  quantity: number
+  purchasePrice: number | null
+}
+
 export interface StockInput {
   symbol: string
   name: string
-  quantity: number
   currentPrice: number
+  lots: PurchaseLot[]
+}
+
+export function summarizeLots(
+  lots: readonly Readonly<PurchaseLot>[],
+): { quantity: number; averagePurchasePrice: number | null } {
+  let quantity = 0
+  let totalPurchaseCost = 0
+  let hasUnknownPurchasePrice = false
+
+  for (const lot of lots) {
+    if (!Number.isFinite(lot.quantity) || lot.quantity < 0) {
+      throw new Error('La cantidad de cada compra debe ser finita y no negativa.')
+    }
+
+    const nextQuantity = quantity + lot.quantity
+    if (!Number.isFinite(nextQuantity)) {
+      throw new Error('La cantidad total de las compras excede los límites numéricos permitidos.')
+    }
+    quantity = nextQuantity
+
+    if (lot.purchasePrice === null) {
+      if (lot.quantity > 0) hasUnknownPurchasePrice = true
+      continue
+    }
+    if (!Number.isFinite(lot.purchasePrice) || lot.purchasePrice <= 0) {
+      throw new Error('El precio pagado debe ser finito y mayor que cero.')
+    }
+
+    const purchaseCost = lot.quantity * lot.purchasePrice
+    const nextPurchaseCost = totalPurchaseCost + purchaseCost
+    if (!Number.isFinite(purchaseCost) || !Number.isFinite(nextPurchaseCost)) {
+      throw new Error('El costo total de las compras excede los límites numéricos permitidos.')
+    }
+    totalPurchaseCost = nextPurchaseCost
+  }
+
+  if (quantity === 0 || hasUnknownPurchasePrice) {
+    return { quantity, averagePurchasePrice: null }
+  }
+
+  let averagePurchasePrice = 0
+  for (const lot of lots) {
+    if (lot.quantity === 0) continue
+    averagePurchasePrice += (lot.quantity / quantity) * lot.purchasePrice!
+  }
+  if (!Number.isFinite(averagePurchasePrice) || averagePurchasePrice <= 0) {
+    throw new Error('El costo promedio excede los límites numéricos permitidos.')
+  }
+
+  return { quantity, averagePurchasePrice }
 }
 
 export interface AllocationInput {
@@ -43,14 +98,24 @@ const ALLOCATION_TOLERANCE_PERCENT = 1e-8
 export class Stock {
   readonly symbol: string
   readonly name: string
-  readonly quantity: number
+  readonly lots: readonly Readonly<PurchaseLot>[]
+  private readonly lotsSummary: ReturnType<typeof summarizeLots>
   private readonly price: number
 
   constructor(input: StockInput) {
     this.symbol = normalizeSymbol(input.symbol)
     this.name = input.name.trim()
-    this.quantity = input.quantity
+    this.lots = Object.freeze(input.lots.map((lot) => Object.freeze({ ...lot })))
+    this.lotsSummary = summarizeLots(this.lots)
     this.price = input.currentPrice
+  }
+
+  get quantity(): number {
+    return this.lotsSummary.quantity
+  }
+
+  get averagePurchasePrice(): number | null {
+    return this.lotsSummary.averagePurchasePrice
   }
 
   currentPrice(): number {
@@ -207,11 +272,22 @@ export function validatePortfolioInput(value: unknown): PortfolioInput {
   const input: PortfolioInput = {
     positions: readArray(value.positions, 'positions').map((entry) => {
       if (!isRecord(entry)) throw new Error('Una posición de la cartera no es válida.')
+      const lots = readArray(entry.lots, 'lots').map((lot) => {
+        if (!isRecord(lot)) throw new Error('Una compra de la cartera no es válida.')
+        return {
+          quantity: readNumber(lot.quantity, 'quantity'),
+          purchasePrice:
+            lot.purchasePrice === null
+              ? null
+              : readNumber(lot.purchasePrice, 'purchasePrice'),
+        }
+      })
+      summarizeLots(lots)
       return {
         symbol: readString(entry.symbol, 'symbol'),
         name: readString(entry.name, 'name'),
-        quantity: readNumber(entry.quantity, 'quantity'),
         currentPrice: readNumber(entry.currentPrice, 'currentPrice'),
+        lots,
       }
     }),
     allocations: readArray(value.allocations, 'allocations').map((entry) => {
@@ -261,7 +337,9 @@ function readString(value: unknown, key: string): string {
 }
 
 function readNumber(value: unknown, key: string): number {
-  if (typeof value !== 'number') throw new Error(`El campo ${key} debe ser numérico.`)
+  if (typeof value !== 'number' || !Number.isFinite(value)) {
+    throw new Error(`El campo ${key} debe ser un número finito.`)
+  }
   return value
 }
 

@@ -2,7 +2,7 @@
 
 ## Alcance
 
-Balance calcula una propuesta de rebalanceo para un portafolio de acciones. El usuario ingresa cantidades, precios simulados y porcentajes objetivo. La aplicación indica qué comprar o vender sin ejecutar operaciones.
+Balance calcula una propuesta de rebalanceo para un portafolio de acciones. El usuario registra compras, define precios actuales y asigna porcentajes objetivo. La aplicación indica qué comprar o vender sin ejecutar operaciones.
 
 La consigna pide una clase `Portfolio`, una colección de acciones, una colección de asignaciones objetivo y un método de rebalanceo. Las posiciones actuales y las asignaciones se modelan por separado para mantener esa distinción.
 
@@ -30,8 +30,14 @@ import { Portfolio } from '../src/domain/portfolio'
 
 const portfolio = new Portfolio({
   positions: [
-    { symbol: 'META', name: 'Meta', quantity: 10, currentPrice: 100 },
-    { symbol: 'AAPL', name: 'Apple', quantity: 5, currentPrice: 200 },
+    {
+      symbol: 'META', name: 'Meta', currentPrice: 100,
+      lots: [{ quantity: 10, purchasePrice: 90 }],
+    },
+    {
+      symbol: 'AAPL', name: 'Apple', currentPrice: 200,
+      lots: [{ quantity: 5, purchasePrice: 180 }],
+    },
   ],
   allocations: [
     { symbol: 'META', targetPercent: 40 },
@@ -46,7 +52,7 @@ portfolio.rebalance()
 
 ## Supuestos
 
-- Todos los precios están en USD y son datos de simulación editables.
+- Todos los precios están en USD. Los precios actuales se pueden editar o consultar al proveedor de cotizaciones.
 - Se permiten acciones fraccionarias.
 - Los porcentajes objetivo suman 100 %.
 - No hay comisiones, impuestos, efectivo adicional ni restricciones de liquidez.
@@ -78,3 +84,32 @@ Se eligieron escrituras explícitas porque hay dos acciones que modifican el por
 El formato tiene una versión para detectar datos incompatibles. Si falla la lectura o la escritura, la pantalla informa el problema. Los cambios pueden seguir usándose en memoria. La aplicación no sobrescribe datos inválidos al cargar.
 
 Se conservan los objetivos que todavía no suman 100 % como un borrador editable. El servidor exige una distribución válida antes de calcular el rebalanceo. Las propuestas de operaciones no se guardan y deben calcularse otra vez.
+
+## Compras a distintos precios
+
+Cada posición contiene una lista de compras con cantidad y precio pagado. La cantidad total se deriva de esa lista para evitar dos valores que puedan divergir.
+
+```text
+cantidadTotal = suma de las cantidades de las compras
+costoPromedio = suma de cantidad × precioPagado / cantidadTotal
+```
+
+Comprar 2 acciones a USD 100 y 3 a USD 120 produce 5 acciones con costo promedio de USD 112. Si el precio actual es USD 150, el valor de esa posición es USD 750. El rebalanceo utiliza USD 750, sin depender del costo histórico.
+
+Los datos de la primera versión no contienen precios de compra. Al recuperarlos, cada posición se convierte en una compra con su cantidad original y costo desconocido. Ese costo se representa con `null`, nunca con el precio actual. El usuario puede completarlo después.
+
+El costo promedio no se muestra como conocido mientras alguna compra con cantidad positiva carezca de precio pagado. La aplicación guarda el nuevo formato con versión 2 y conserva la clave anterior para recuperar las posiciones ya guardadas. La migración ocurre en memoria y se escribe al confirmar cambios.
+
+## Tema e interacción
+
+La interfaz ofrece tema claro y oscuro. La elección se conserva en el navegador. Si todavía no hay una elección, se usa la preferencia del sistema.
+
+Los botones y enlaces tienen cursor de acción, respuesta visual al pasar el puntero y foco visible con teclado. Los campos de texto conservan el cursor de edición y los controles deshabilitados se distinguen de los disponibles.
+
+## Actualización de cotizaciones
+
+La consulta de mercado devuelve éxitos y errores por símbolo. Los éxitos reemplazan únicamente el precio actual. Las compras y sus costos se conservan. Los errores mantienen el precio anterior y se muestran al usuario.
+
+La hora de la cotización pertenece al proveedor. La hora de la consulta no la reemplaza. La aplicación guarda los precios actualizados, pero no conserva los metadatos de la consulta entre recargas. Después de recargar, identifica los valores como precios guardados hasta una nueva consulta.
+
+Las consultas están aisladas en el adaptador de servidor. [mercado.md](mercado.md) explica la fuente, la disponibilidad y los límites de uso del proveedor.

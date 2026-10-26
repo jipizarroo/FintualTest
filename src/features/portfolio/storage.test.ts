@@ -9,7 +9,15 @@ import {
 
 const storageKey = 'balance.portfolio.v1'
 const input: PortfolioInput = {
-  positions: [{ symbol: 'AAPL', name: 'Apple', quantity: 1, currentPrice: 100 }],
+  positions: [{
+    symbol: 'AAPL',
+    name: 'Apple',
+    currentPrice: 100,
+    lots: [
+      { quantity: 0.5, purchasePrice: 80 },
+      { quantity: 0.5, purchasePrice: 100 },
+    ],
+  }],
   allocations: [{ symbol: 'AAPL', targetPercent: 95 }],
   quotes: [{ symbol: 'TSLA', name: 'Tesla', currentPrice: 200 }],
 }
@@ -39,10 +47,49 @@ describe('portfolio storage', () => {
 
     expect(savePortfolioStorage(input)).toBe(true)
     expect(storage.entries.get(storageKey)).toBe(
-      JSON.stringify({ version: 1, input }),
+      JSON.stringify({ version: 2, input }),
     )
     expect(loadPortfolioStorage()).toEqual({ status: 'saved', input })
   })
+
+  it('migrates v1 in memory without writing or inventing costs', () => {
+    const legacyInput = {
+      positions: [
+        { symbol: 'AAPL', name: 'Apple', quantity: 1, currentPrice: 100 },
+        { symbol: 'NVDA', name: 'NVIDIA', quantity: 0, currentPrice: 50 },
+      ],
+      allocations: [{ symbol: 'AAPL', targetPercent: 95 }],
+      quotes: [{ symbol: 'TSLA', name: 'Tesla', currentPrice: 200 }],
+    }
+    const serialized = JSON.stringify({ version: 1, input: legacyInput })
+    const storage = createStorage(serialized)
+    useStorage(storage)
+
+    expect(loadPortfolioStorage()).toEqual({
+      status: 'saved',
+      input: {
+        positions: [
+          {
+            symbol: 'AAPL',
+            name: 'Apple',
+            currentPrice: 100,
+            lots: [{ quantity: 1, purchasePrice: null }],
+          },
+          {
+            symbol: 'NVDA',
+            name: 'NVIDIA',
+            currentPrice: 50,
+            lots: [],
+          },
+        ],
+        allocations: [{ symbol: 'AAPL', targetPercent: 95 }],
+        quotes: [{ symbol: 'TSLA', name: 'Tesla', currentPrice: 200 }],
+      },
+    })
+    expect(storage.entries.get(storageKey)).toBe(serialized)
+    expect(storage.setItem).not.toHaveBeenCalled()
+  })
+
 
   it('returns empty without writing when no portfolio is saved', () => {
     const storage = createStorage()
@@ -72,8 +119,38 @@ describe('portfolio storage', () => {
         '{"version":1,"input":{"positions":[{"symbol":"AAPL","name":"Apple","quantity":1e309,"currentPrice":100}],"allocations":[{"symbol":"AAPL","targetPercent":95}],"quotes":[]}}',
     },
     {
+      name: 'a lot has a negative quantity',
+      serialized: JSON.stringify({
+        version: 2,
+        input: {
+          ...input,
+          positions: [{
+            symbol: 'AAPL',
+            name: 'Apple',
+            currentPrice: 100,
+            lots: [{ quantity: -1, purchasePrice: null }],
+          }],
+        },
+      }),
+    },
+    {
+      name: 'a lot has a non-positive purchase price',
+      serialized: JSON.stringify({
+        version: 2,
+        input: {
+          ...input,
+          positions: [{
+            symbol: 'AAPL',
+            name: 'Apple',
+            currentPrice: 100,
+            lots: [{ quantity: 1, purchasePrice: 0 }],
+          }],
+        },
+      }),
+    },
+    {
       name: 'the version is unknown',
-      serialized: JSON.stringify({ version: 2, input }),
+      serialized: JSON.stringify({ version: 3, input }),
     },
   ])('leaves saved data untouched when $name', ({ serialized }) => {
     const storage = createStorage(serialized)
@@ -93,6 +170,24 @@ describe('portfolio storage', () => {
 
     expect(loadPortfolioStorage()).toEqual({ status: 'error' })
   })
+
+  it('does not write invalid portfolio data', () => {
+    const storage = createStorage()
+    useStorage(storage)
+    const invalidInput: PortfolioInput = {
+      ...input,
+      positions: [{
+        symbol: 'AAPL',
+        name: 'Apple',
+        currentPrice: 100,
+        lots: [{ quantity: -1, purchasePrice: null }],
+      }],
+    }
+
+    expect(savePortfolioStorage(invalidInput)).toBe(false)
+    expect(storage.setItem).not.toHaveBeenCalled()
+  })
+
 
   it('reports write errors', () => {
     const storage = createStorage()

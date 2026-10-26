@@ -38,4 +38,23 @@ El recorrido de navegador confirmó estos casos.
 
 El build y TypeScript se verificaron otra vez después de incorporar la persistencia.
 
-Esta comprobación cubre el simulador. No evalúa ejecución de órdenes, cotizaciones reales ni servicios externos, porque no forman parte del MVP.
+Estas comprobaciones iniciales cubrieron el simulador. La siguiente iteración agregó compras, temas y consultas de mercado.
+
+## Compras, temas y cotizaciones
+
+Las 28 pruebas de `src/domain/portfolio.test.ts` y `src/features/portfolio/storage.test.ts` pasaron. Cubren el promedio ponderado, costos desconocidos, límites numéricos y migración del formato v1 a v2. Las 12 pruebas de `src/server/market.test.ts` también pasaron. No se ejecutó la suite completa.
+
+TypeScript y el build del cliente y servidor terminaron sin errores después de integrar los cambios.
+
+El navegador confirmó estos recorridos.
+
+- Un portafolio v1 conservó su cantidad y precio actual. Cargarlo no reescribió la copia guardada ni inventó un costo de compra.
+- Dos compras de AAPL, 2 acciones a USD 100 y 3 a USD 120, mostraron cantidad 5, costo promedio USD 112 y valor USD 750 con precio actual USD 150.
+- Guardar convirtió el formato a v2. Recargar conservó ambas compras. Quitar una compra actualizó el almacenamiento.
+- La consulta real de AAPL devolvió USD 347,725 con fecha de referencia del 23 de octubre de 2026. Las compras y su costo promedio permanecieron intactos. El rebalanceo utilizó la nueva valoración.
+- Una consulta conjunta de AAPL y ZZZZZZ actualizó AAPL y conservó el precio previo de ZZZZZZ con un aviso de error.
+- El tema respetó la preferencia del sistema. Una elección manual se conservó después de recargar.
+- La tabla completa cabe en su contenedor de escritorio a 1440 píxeles. A 390 píxeles, el editor no desborda el ancho del documento.
+- Los botones habilitados mostraron cursor de mano. Se inspeccionaron las vistas clara y oscura.
+
+Yahoo Finance se consultó desde el servidor. El paquete del cliente no contiene la dirección del proveedor ni su User-Agent. Estas pruebas no acreditan disponibilidad continua del endpoint ni ejecución de órdenes. Los límites del proveedor están en [mercado.md](mercado.md).

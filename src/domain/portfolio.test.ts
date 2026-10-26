@@ -1,12 +1,86 @@
 import { describe, expect, it } from 'vitest'
-import { calculateRebalance, Portfolio, type PortfolioInput } from './portfolio'
+import {
+  calculateRebalance,
+  Portfolio,
+  summarizeLots,
+  type PortfolioInput,
+} from './portfolio'
+
+describe('summarizeLots', () => {
+  it('calculates the weighted average and ignores unknown costs for zero quantities', () => {
+    const summary = summarizeLots([
+      { quantity: 2, purchasePrice: 100 },
+      { quantity: 1, purchasePrice: 200 },
+      { quantity: 0, purchasePrice: null },
+    ])
+
+    expect(summary.quantity).toBe(3)
+    expect(summary.averagePurchasePrice).toBeCloseTo(400 / 3)
+  })
+
+  it('returns null when a held purchase has no cost or total quantity is zero', () => {
+    expect(summarizeLots([
+      { quantity: 2, purchasePrice: 100 },
+      { quantity: 1, purchasePrice: null },
+    ])).toEqual({ quantity: 3, averagePurchasePrice: null })
+    expect(summarizeLots([
+      { quantity: 0, purchasePrice: 100 },
+    ])).toEqual({ quantity: 0, averagePurchasePrice: null })
+  })
+
+  it.each([
+    {
+      name: 'negative quantity',
+      lots: [{ quantity: -1, purchasePrice: null }],
+    },
+    {
+      name: 'non-finite quantity',
+      lots: [{ quantity: Number.POSITIVE_INFINITY, purchasePrice: null }],
+    },
+    {
+      name: 'non-positive purchase price',
+      lots: [{ quantity: 1, purchasePrice: 0 }],
+    },
+    {
+      name: 'non-finite purchase price',
+      lots: [{ quantity: 1, purchasePrice: Number.POSITIVE_INFINITY }],
+    },
+    {
+      name: 'quantity overflow',
+      lots: [
+        { quantity: 1e308, purchasePrice: null },
+        { quantity: 1e308, purchasePrice: null },
+      ],
+    },
+    {
+      name: 'purchase cost overflow',
+      lots: [
+        { quantity: 8e307, purchasePrice: 2 },
+        { quantity: 8e307, purchasePrice: 2 },
+      ],
+    },
+  ])('rejects $name', ({ lots }) => {
+    expect(() => summarizeLots(lots)).toThrow()
+  })
+})
+
 
 describe('calculateRebalance', () => {
   it('proposes dollar-based buys and sells for held and target-only symbols', () => {
     const result = calculateRebalance({
       positions: [
-        { symbol: 'MSFT', name: 'Microsoft', quantity: 2, currentPrice: 100 },
-        { symbol: 'AAPL', name: 'Apple', quantity: 1, currentPrice: 100 },
+        {
+          symbol: 'MSFT',
+          name: 'Microsoft',
+          currentPrice: 100,
+          lots: [{ quantity: 2, purchasePrice: 10 }],
+        },
+        {
+          symbol: 'AAPL',
+          name: 'Apple',
+          currentPrice: 100,
+          lots: [{ quantity: 1, purchasePrice: 25 }],
+        },
       ],
       allocations: [
         { symbol: 'MSFT', targetPercent: 50 },
@@ -27,8 +101,18 @@ describe('calculateRebalance', () => {
   it('liquidates a held symbol missing from the target allocation', () => {
     const result = calculateRebalance({
       positions: [
-        { symbol: 'NVDA', name: 'NVIDIA', quantity: 1, currentPrice: 100 },
-        { symbol: 'MSFT', name: 'Microsoft', quantity: 1, currentPrice: 100 },
+        {
+          symbol: 'NVDA',
+          name: 'NVIDIA',
+          currentPrice: 100,
+          lots: [{ quantity: 1, purchasePrice: null }],
+        },
+        {
+          symbol: 'MSFT',
+          name: 'Microsoft',
+          currentPrice: 100,
+          lots: [{ quantity: 1, purchasePrice: null }],
+        },
       ],
       allocations: [{ symbol: 'MSFT', targetPercent: 100 }],
       quotes: [],
@@ -50,8 +134,18 @@ describe('calculateRebalance', () => {
 
   it('does not propose residual trades for an already balanced portfolio', () => {
     const positions = [
-      { symbol: 'AAPL', name: 'Apple', quantity: 1, currentPrice: 3.33 },
-      { symbol: 'MSFT', name: 'Microsoft', quantity: 1, currentPrice: 6.68 },
+      {
+        symbol: 'AAPL',
+        name: 'Apple',
+        currentPrice: 3.33,
+        lots: [{ quantity: 1, purchasePrice: null }],
+      },
+      {
+        symbol: 'MSFT',
+        name: 'Microsoft',
+        currentPrice: 6.68,
+        lots: [{ quantity: 1, purchasePrice: null }],
+      },
     ]
     const total = 10.01
 
@@ -67,7 +161,12 @@ describe('calculateRebalance', () => {
 
   it('rejects invalid weights, duplicate symbols, and a second price for a held symbol', () => {
     const input: PortfolioInput = {
-      positions: [{ symbol: 'AAPL', name: 'Apple', quantity: 1, currentPrice: 100 }],
+      positions: [{
+        symbol: 'AAPL',
+        name: 'Apple',
+        currentPrice: 100,
+        lots: [{ quantity: 1, purchasePrice: null }],
+      }],
       allocations: [{ symbol: 'AAPL', targetPercent: 95 }],
       quotes: [],
     }
@@ -84,15 +183,30 @@ describe('calculateRebalance', () => {
 
   it('rejects non-finite position values and totals', () => {
     expect(() => new Portfolio({
-      positions: [{ symbol: 'AAPL', name: 'Apple', quantity: Number.MAX_VALUE, currentPrice: 2 }],
+      positions: [{
+        symbol: 'AAPL',
+        name: 'Apple',
+        currentPrice: 2,
+        lots: [{ quantity: Number.MAX_VALUE, purchasePrice: null }],
+      }],
       allocations: [{ symbol: 'AAPL', targetPercent: 100 }],
       quotes: [],
     })).toThrow('El valor de AAPL excede los límites numéricos permitidos.')
 
     expect(() => calculateRebalance({
       positions: [
-        { symbol: 'AAA', name: 'AAA Inc.', quantity: 1, currentPrice: Number.MAX_VALUE },
-        { symbol: 'BBB', name: 'BBB Inc.', quantity: 1, currentPrice: Number.MAX_VALUE },
+        {
+          symbol: 'AAA',
+          name: 'AAA Inc.',
+          currentPrice: Number.MAX_VALUE,
+          lots: [{ quantity: 1, purchasePrice: null }],
+        },
+        {
+          symbol: 'BBB',
+          name: 'BBB Inc.',
+          currentPrice: Number.MAX_VALUE,
+          lots: [{ quantity: 1, purchasePrice: null }],
+        },
       ],
       allocations: [
         { symbol: 'AAA', targetPercent: 50 },

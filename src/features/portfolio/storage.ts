@@ -1,4 +1,8 @@
-import { validatePortfolioInput, type PortfolioInput } from '../../domain/portfolio'
+import {
+  summarizeLots,
+  validatePortfolioInput,
+  type PortfolioInput,
+} from '../../domain/portfolio'
 
 const storageKey = 'balance.portfolio.v1'
 
@@ -17,18 +21,55 @@ function browserStorage(): Storage | null {
   }
 }
 
-function hasFiniteNumbers(input: PortfolioInput): boolean {
+function hasValidNumbers(input: PortfolioInput): boolean {
   return (
-    input.positions.every(
-      (position) =>
-        Number.isFinite(position.quantity) &&
-        Number.isFinite(position.currentPrice),
+    input.positions.every((position) => {
+      const { quantity } = summarizeLots(position.lots)
+      return (
+        Number.isFinite(position.currentPrice) &&
+        position.currentPrice > 0 &&
+        Number.isFinite(quantity * position.currentPrice)
+      )
+    }) &&
+    input.allocations.every(
+      (allocation) =>
+        Number.isFinite(allocation.targetPercent) &&
+        allocation.targetPercent >= 0 &&
+        allocation.targetPercent <= 100,
     ) &&
-    input.allocations.every((allocation) =>
-      Number.isFinite(allocation.targetPercent),
-    ) &&
-    input.quotes.every((quote) => Number.isFinite(quote.currentPrice))
+    input.quotes.every(
+      (quote) => Number.isFinite(quote.currentPrice) && quote.currentPrice > 0,
+    )
   )
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
+}
+
+function migrateV1Input(value: unknown): unknown {
+  if (!isRecord(value) || !Array.isArray(value.positions)) {
+    throw new Error('Los datos de la cartera v1 no son válidos.')
+  }
+
+  return {
+    ...value,
+    positions: value.positions.map((position) => {
+      if (!isRecord(position)) {
+        throw new Error('Una posición de la cartera v1 no es válida.')
+      }
+
+      return {
+        symbol: position.symbol,
+        name: position.name,
+        currentPrice: position.currentPrice,
+        lots:
+          position.quantity === 0
+            ? []
+            : [{ quantity: position.quantity, purchasePrice: null }],
+      }
+    }),
+  }
 }
 
 export function loadPortfolioStorage(): PortfolioStorageRead {
@@ -39,20 +80,21 @@ export function loadPortfolioStorage(): PortfolioStorageRead {
     const serialized = storage.getItem(storageKey)
     if (serialized === null) return { status: 'empty' }
 
-    const value: unknown = JSON.parse(serialized)
-    if (
-      typeof value !== 'object' ||
-      value === null ||
-      Array.isArray(value) ||
-      !('version' in value) ||
-      value.version !== 1 ||
-      !('input' in value)
-    ) {
+    const envelope: unknown = JSON.parse(serialized)
+    if (!isRecord(envelope) || !('version' in envelope) || !('input' in envelope)) {
       return { status: 'error' }
     }
 
-    const input = validatePortfolioInput(value.input)
-    if (!hasFiniteNumbers(input)) return { status: 'error' }
+    let input: PortfolioInput
+    if (envelope.version === 1) {
+      input = validatePortfolioInput(migrateV1Input(envelope.input))
+    } else if (envelope.version === 2) {
+      input = validatePortfolioInput(envelope.input)
+    } else {
+      return { status: 'error' }
+    }
+
+    if (!hasValidNumbers(input)) return { status: 'error' }
 
     return { status: 'saved', input }
   } catch {
@@ -65,7 +107,12 @@ export function savePortfolioStorage(input: PortfolioInput): boolean {
   if (!storage) return false
 
   try {
-    storage.setItem(storageKey, JSON.stringify({ version: 1, input }))
+    const validatedInput = validatePortfolioInput(input)
+    if (!hasValidNumbers(validatedInput)) return false
+    storage.setItem(
+      storageKey,
+      JSON.stringify({ version: 2, input: validatedInput }),
+    )
     return true
   } catch {
     return false
