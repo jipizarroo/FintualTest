@@ -1,0 +1,43 @@
+{
+  "exportedAt": "2026-10-26T01:54:53.784Z",
+  "rootSession": "01a175a6-85ec-79c1-a7fe-6bdb0d1a4113",
+  "sessionCount": 43,
+  "messageCount": 500,
+  "toolCallCount": 1110,
+  "skillReferenceCount": 159,
+  "credentialRedactions": 0,
+  "localPathNormalization": true,
+  "excluded": [
+    "system/developer messages",
+    "private reasoning records",
+    "tool results",
+    "binary attachments"
+  ],
+  "artifacts": [
+    {
+      "path": "docs/conversaciones.jsonl",
+      "sha256": "8cd6879e73d9dd2892341fc08779573195f7a8206f9ad372b32892df1bacc8ec",
+      "bytes": 584328
+    },
+    {
+      "path": "docs/llm/llamadas.jsonl",
+      "sha256": "427702c53c0f8eb54b318d2bd3145d21d166b9f3ac057b80e6610bb59346daa4",
+      "bytes": 1354669
+    },
+    {
+      "path": "docs/llm/referencias-skills.jsonl",
+      "sha256": "79c08c9bc1538c3242d583ea580d618f9f16f758c5cbffe9c148634f5ffba670",
+      "bytes": 174953
+    },
+    {
+      "path": "docs/llm/sesiones.json",
+      "sha256": "2c0a98ce81ec4efbed2c7391012794ecc4ac41e98905a9f85f48d0bb0dfd5048",
+      "bytes": 15348
+    },
+    {
+      "path": "docs/llm/conversacion-principal.md",
+      "sha256": "0389d6852eebbd5a3af9235ccd4a049def9723dfb757a7f2c60c4e3ce639d16d",
+      "bytes": 96998
+    }
+  ]
+}
