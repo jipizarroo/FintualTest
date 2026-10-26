@@ -22,6 +22,8 @@ TypeScript, el build del cliente y servidor y Oxlint terminaron sin errores. Pas
 
 React Doctor reportó 78/100 y cinco advertencias. Señaló el tamaño y complejidad del dashboard, la exportación de variantes del botón shadcn, el formato local de fechas y el ajuste de página al reducir datos. No se agregaron supresiones. El formato de fechas solo se muestra después de consultar precios desde el cliente; la página visible se limita antes del efecto que sincroniza el índice.
 
+Un revisor independiente examinó el cálculo financiero, el modelo de tabla, la tabla y sus pruebas. No encontró riesgos concretos de corrección ni supresiones que eliminar. La revisión confirmó que el orden usa valores numéricos y desempata por símbolo, y que una reducción de filas limita la página dentro del mismo render.
+
 ## Pendientes registrados
 
 Los issues [#1](https://github.com/jipizarroo/FintualTest/issues/1) y [#2](https://github.com/jipizarroo/FintualTest/issues/2) documentan problemas de la base. Esta iteración no modifica el límite del proveedor ni agrega navegación automática hacia la propuesta.
