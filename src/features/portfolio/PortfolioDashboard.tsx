@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react'
+import { useEffect, useState, type FormEvent } from 'react'
 import {
   ArrowDownLeft,
   ArrowRight,
@@ -23,6 +23,11 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import type { PortfolioInput, RebalanceResult } from '@/domain/portfolio'
+import {
+  clearPortfolioStorage,
+  loadPortfolioStorage,
+  savePortfolioStorage,
+} from './storage'
 
 type PortfolioDashboardProps = {
   initialInput: PortfolioInput
@@ -42,6 +47,11 @@ type ProposalState =
   | { status: 'idle' }
   | { status: 'loading' }
   | { status: 'success'; result: RebalanceResult }
+  | { status: 'error'; message: string }
+
+type PortfolioStorageState =
+  | { status: 'loading' }
+  | { status: 'ready' }
   | { status: 'error'; message: string }
 
 const dollars = new Intl.NumberFormat('es-CL', {
@@ -89,11 +99,30 @@ export function PortfolioDashboard({
   onRebalance,
 }: PortfolioDashboardProps) {
   const [input, setInput] = useState(initialInput)
+  const [storageState, setStorageState] = useState<PortfolioStorageState>({
+    status: 'loading',
+  })
   const [editor, setEditor] = useState<{
     rows: EditorRow[]
     error: string | null
   } | null>(null)
   const [proposal, setProposal] = useState<ProposalState>({ status: 'idle' })
+
+  useEffect(() => {
+    const saved = loadPortfolioStorage()
+    if (saved.status === 'saved') setInput(saved.input)
+    setStorageState(
+      saved.status === 'error'
+        ? {
+            status: 'error',
+            message:
+              'No se pudo recuperar el portafolio. Se muestra el ejemplo sin reemplazar la copia guardada.',
+          }
+        : { status: 'ready' },
+    )
+  }, [])
+
+  const storageReady = storageState.status !== 'loading'
   const rows = rowsFromInput(input)
   const totalValue = input.positions.reduce(
     (sum, position) => sum + position.quantity * position.currentPrice,
@@ -132,9 +161,14 @@ export function PortfolioDashboard({
     )
   }
 
+  function startEditing(rows: EditorRow[]) {
+    if (!storageReady) return
+    setEditor({ rows, error: null })
+  }
+
   function savePortfolio(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    if (!editor) return
+    if (!editor || !storageReady) return
 
     const updatedRows = editor.rows.map((row) => ({
       symbol: row.symbol.trim().toUpperCase(),
@@ -180,7 +214,7 @@ export function PortfolioDashboard({
       return
     }
 
-    setInput({
+    const updatedInput: PortfolioInput = {
       positions: updatedRows
         .filter((row) => row.quantity > 0)
         .map(({ symbol, name, quantity, currentPrice }) => ({
@@ -200,7 +234,18 @@ export function PortfolioDashboard({
           name,
           currentPrice,
         })),
-    })
+    }
+
+    setInput(updatedInput)
+    setStorageState(
+      savePortfolioStorage(updatedInput)
+        ? { status: 'ready' }
+        : {
+            status: 'error',
+            message:
+              'No se pudieron guardar los cambios. Podrían perderse al recargar.',
+          },
+    )
     setProposal({ status: 'idle' })
     setEditor(null)
   }
@@ -274,6 +319,14 @@ export function PortfolioDashboard({
         </header>
 
         <main className="mx-auto max-w-[1440px] px-5 pb-8 pt-8 sm:px-8 lg:px-10 lg:pt-10">
+          {storageState.status === 'error' && (
+            <p
+              role="status"
+              className="mb-5 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800"
+            >
+              {storageState.message}
+            </p>
+          )}
           <div className="mb-8 flex flex-col justify-between gap-5 sm:flex-row sm:items-center">
             <div>
               <p className="mb-2 text-[10px] font-semibold tracking-[0.18em] text-blue-600">
@@ -288,7 +341,12 @@ export function PortfolioDashboard({
             </div>
             <Button
               className="h-11 self-start rounded-xl bg-blue-600 px-5 text-white shadow-sm shadow-blue-200 hover:bg-blue-700 sm:self-auto"
-              disabled={loading || editor !== null || rows.length === 0}
+              disabled={
+                !storageReady ||
+                loading ||
+                editor !== null ||
+                rows.length === 0
+              }
               onClick={rebalance}
             >
               {loading ? (
@@ -381,8 +439,8 @@ export function PortfolioDashboard({
                     variant="outline"
                     size="sm"
                     className="shrink-0 border-slate-200 bg-white text-xs text-slate-600 hover:bg-slate-50"
-                    disabled={loading}
-                    onClick={() => setEditor({ rows, error: null })}
+                    disabled={loading || !storageReady}
+                    onClick={() => startEditing(rows)}
                   >
                     <SlidersHorizontal className="size-3.5" /> Editar
                     <span className="hidden sm:inline"> portafolio</span>
@@ -580,20 +638,18 @@ export function PortfolioDashboard({
                   <Button
                     size="sm"
                     className="bg-blue-600 text-white hover:bg-blue-700"
+                    disabled={!storageReady}
                     onClick={() =>
-                      setEditor({
-                        rows: [
-                          {
-                            id: crypto.randomUUID(),
-                            symbol: '',
-                            name: '',
-                            quantity: '0',
-                            currentPrice: '',
-                            targetPercent: '0',
-                          },
-                        ],
-                        error: null,
-                      })
+                      startEditing([
+                        {
+                          id: crypto.randomUUID(),
+                          symbol: '',
+                          name: '',
+                          quantity: '0',
+                          currentPrice: '',
+                          targetPercent: '0',
+                        },
+                      ])
                     }
                   >
                     <Plus /> Agregar mi primera acción
@@ -731,22 +787,19 @@ export function PortfolioDashboard({
                     <button
                       type="button"
                       className="flex items-center gap-1.5 text-[11px] font-medium text-blue-600 transition-colors hover:text-blue-800 disabled:opacity-50"
-                      disabled={loading}
+                      disabled={loading || !storageReady}
                       onClick={() =>
-                        setEditor({
-                          rows: [
-                            ...rows,
-                            {
-                              id: crypto.randomUUID(),
-                              symbol: '',
-                              name: '',
-                              quantity: '0',
-                              currentPrice: '',
-                              targetPercent: '0',
-                            },
-                          ],
-                          error: null,
-                        })
+                        startEditing([
+                          ...rows,
+                          {
+                            id: crypto.randomUUID(),
+                            symbol: '',
+                            name: '',
+                            quantity: '0',
+                            currentPrice: '',
+                            targetPercent: '0',
+                          },
+                        ])
                       }
                     >
                       <Plus className="size-3.5" /> Agregar acción
@@ -1006,11 +1059,22 @@ export function PortfolioDashboard({
             </p>
             <button
               type="button"
-              disabled={loading}
+              disabled={loading || !storageReady}
               onClick={() => {
+                if (!storageReady) return
+                const cleared = clearPortfolioStorage()
                 setInput(initialInput)
                 setEditor(null)
                 setProposal({ status: 'idle' })
+                setStorageState(
+                  cleared
+                    ? { status: 'ready' }
+                    : {
+                        status: 'error',
+                        message:
+                          'Se muestra el ejemplo, pero no se pudo borrar el portafolio guardado y podría volver al recargar.',
+                      },
+                )
               }}
               className="flex w-fit items-center gap-1.5 text-[10px] text-slate-400 transition-colors hover:text-slate-600 disabled:opacity-50"
             >

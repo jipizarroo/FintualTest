@@ -22,6 +22,14 @@ Abre la URL que muestra Vite en la terminal.
 
 Los precios son simulados y editables. Las operaciones son propuestas, sin conexión a un intermediario ni envío de órdenes.
 
+## Conservar tu portafolio
+
+Pulsa **Guardar cambios** después de editar. La aplicación conserva posiciones, precios y objetivos en este navegador y los recupera al recargar. **Restablecer portafolio** elimina la copia guardada y vuelve al ejemplo.
+
+Los cambios de un formulario que no has confirmado no se guardan. Las propuestas de operaciones se calculan de nuevo. Si el navegador bloquea el almacenamiento, la pantalla lo informa y permite seguir usando el simulador.
+
+La copia pertenece al navegador y a la dirección del sitio. No se comparte entre dispositivos ni entre `localhost` y `127.0.0.1`.
+
 ## Estructura
 
 - `src/domain` contiene las clases `Stock` y `Portfolio`, el cálculo y sus pruebas.
@@ -35,13 +43,15 @@ El dominio no importa React ni TanStack. La interfaz envía datos al servidor y 
 ## Verificación
 
 ```sh
-npm run test -- src/domain/portfolio.test.ts
+npm run test -- src/domain/portfolio.test.ts src/features/portfolio/storage.test.ts
 npm run typecheck
 npm run build
 ```
 
-El comando de pruebas selecciona únicamente el archivo del dominio del portafolio.
+El comando de pruebas selecciona únicamente los archivos del dominio y del almacenamiento del portafolio.
+
+Para revisar el build localmente, ejecuta `npm run build` y después `npm start`. Vite muestra la dirección de la vista previa compilada.
 
 ## Decisiones y uso de IA
 
-Lee [las decisiones y los supuestos del cálculo](docs/decisiones.md) y [el registro de uso de IA](docs/uso-de-ia.md). La consigna solicita compartir las conversaciones utilizadas durante el desarrollo.
+Lee [las decisiones y los supuestos del cálculo](docs/decisiones.md), [los resultados de verificación](docs/verificacion.md) y [el registro de uso de IA](docs/uso-de-ia.md). La consigna solicita compartir las conversaciones utilizadas durante el desarrollo.
